@@ -58,7 +58,6 @@ class GradientDescent(_TrainingMethod):
             plot_steps = np.unique(np.logspace(0, np.log10(iterations-1), num=100, dtype=int))
             plot_step = 0
             mse_values = []
-            print("test4")
             for i in range(iterations):
                 gradient = self.gradient_function(self.X, self.y-self.y_mean, self.parameters)
                 self.step_method.training_step(gradient, iteration=i)
