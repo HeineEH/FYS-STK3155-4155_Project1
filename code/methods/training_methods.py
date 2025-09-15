@@ -23,6 +23,7 @@ class _TrainingMethod:
         self.y = y
         self.gradient_function = gradient_function
         self.step_method = step_method
+        self.step_method.setup(self.feature_amount)
 
         self.step_method.caller = self
 

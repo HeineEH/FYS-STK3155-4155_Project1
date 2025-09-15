@@ -8,6 +8,8 @@ if TYPE_CHECKING:
 # Template for step methods, like gd-momentum, RMSprop, ADAgrad
 class _StepMethod:
     caller: "_TrainingMethod"
+    def setup(self, num_features: int) -> None:
+        ...
     def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None) -> None:
         ...
 
@@ -25,9 +27,11 @@ class ConstantGradientStep(_StepMethod):
 
 
 class MomentumGradientStep(_StepMethod):
-    def __init__(self, learning_rate: float, momentum: float, num_features: int ) -> None:
+    def __init__(self, learning_rate: float, momentum: float, ) -> None:
         self.learning_rate = learning_rate
         self.momentum = momentum
+    
+    def setup(self, num_features: int) -> None:
         self.velocity: npt.NDArray[np.floating] = np.zeros(num_features)
     
     def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None, ) -> None:
@@ -35,12 +39,31 @@ class MomentumGradientStep(_StepMethod):
         self.caller.parameters -= self.velocity
         
 class ADAgradStep(_StepMethod):
-    def __init__(self, learning_rate: float, num_features: int, error: float = 1e-7) -> None:
+    def __init__(self, learning_rate: float, error: float = 1e-7) -> None:
         self.learning_rate = learning_rate
-        self.accumulated_gradient: npt.NDArray[np.floating] = np.zeros(num_features)
         self.error = error
+    
+    def setup(self, num_features: int) -> None:
+        self.accumulated_gradient = np.zeros(num_features)
+
         
     def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None) -> None:
         self.accumulated_gradient += gradient**2  # Accumulate squared gradients
         adjusted_gradient = gradient / (np.sqrt(self.accumulated_gradient) + self.error)
         self.caller.parameters -= self.learning_rate * adjusted_gradient
+        
+class RMSpropStep(_StepMethod):
+    def __init__(self, learning_rate: float, decay_rate: float, error: float = 1e-6) -> None:
+        self.learning_rate = learning_rate
+        self.decay_rate = decay_rate
+        self.error = error
+        
+    def setup(self, num_features: int) -> None:
+        self.accumulated_gradient = np.zeros(num_features)
+    
+    def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None) -> None:
+        self.accumulated_gradient = self.decay_rate * self.accumulated_gradient + (1 - self.decay_rate) * gradient**2
+        adjusted_gradient = gradient / (np.sqrt(self.accumulated_gradient) + self.error)
+        self.caller.parameters -= self.learning_rate * adjusted_gradient
+        
+    
