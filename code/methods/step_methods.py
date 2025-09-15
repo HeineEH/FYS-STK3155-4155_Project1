@@ -67,3 +67,26 @@ class RMSpropStep(_StepMethod):
         self.caller.parameters -= self.learning_rate * adjusted_gradient
         
     
+class AdamStep(_StepMethod):
+    def __init__(self, learning_rate: float, beta1: float = 0.9, beta2: float = 0.999, error: float = 1e-8) -> None:
+        self.learning_rate = learning_rate
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.error = error
+    
+    def setup(self, num_features: int) -> None:
+        self.t = 0  # Time step
+        self.s = np.zeros(num_features)  # First moment vector
+        self.r = np.zeros(num_features)  # Second moment vector
+    
+    def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None) -> None:
+        self.t += 1
+
+        self.s = self.beta1 * self.s + (1 - self.beta1) * gradient
+        self.r = self.beta2 * self.r + (1 - self.beta2) * (gradient ** 2)
+
+        s_hat = self.s / (1 - self.beta1 ** self.t)
+        r_hat = self.r / (1 - self.beta2 ** self.t)
+
+        adjusted_gradient = s_hat / (np.sqrt(r_hat) + self.error)
+        self.caller.parameters -= self.learning_rate * adjusted_gradient
