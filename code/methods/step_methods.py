@@ -24,7 +24,6 @@ class ConstantGradientStep(_StepMethod):
         
 
 
-# Momentum gradient descent
 class MomentumGradientStep(_StepMethod):
     def __init__(self, learning_rate: float, momentum: float, num_features: int ) -> None:
         self.learning_rate = learning_rate
@@ -34,3 +33,14 @@ class MomentumGradientStep(_StepMethod):
     def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None, ) -> None:
         self.velocity = self.momentum * self.velocity + self.learning_rate * gradient
         self.caller.parameters -= self.velocity
+        
+class ADAgradStep(_StepMethod):
+    def __init__(self, learning_rate: float, num_features: int, error: float = 1e-7) -> None:
+        self.learning_rate = learning_rate
+        self.accumulated_gradient: npt.NDArray[np.floating] = np.zeros(num_features)
+        self.error = error
+        
+    def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None) -> None:
+        self.accumulated_gradient += gradient**2  # Accumulate squared gradients
+        adjusted_gradient = gradient / (np.sqrt(self.accumulated_gradient) + self.error)
+        self.caller.parameters -= self.learning_rate * adjusted_gradient
