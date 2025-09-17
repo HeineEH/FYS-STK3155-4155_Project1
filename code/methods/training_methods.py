@@ -63,7 +63,7 @@ class GradientDescent(_TrainingMethod):
             mse_values = []
             for i in range(iterations):
                 gradient = self.gradient(self.X, self.y-self.y_mean, self.parameters)
-                self.step_method.training_step(gradient, iteration=i)
+                self.step_method.training_step(gradient)
                 
                 if plot_step < len(plot_steps) and i == plot_steps[plot_step]:
                     mse_values.append(self.mse())
@@ -74,4 +74,33 @@ class GradientDescent(_TrainingMethod):
         else:
             for i in range(iterations):
                 gradient = self.gradient(self.X, self.y, self.parameters)
-                self.step_method.training_step(gradient, iteration=i)
+                self.step_method.training_step(gradient)
+
+class StochasticGradientDescent(_TrainingMethod): 
+    def train(self, epochs: int = 1000, n_batches: int = 5,store_mse: bool = True) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
+        n_datapoints = self.X.shape[0]
+        batch_size = int(n_datapoints/n_batches)
+        if store_mse:
+            plot_steps = np.unique(np.logspace(0, np.log10(epochs-1), num=100, dtype=int))
+            plot_step = 0
+            mse_values = []
+            for i in range(epochs):
+                shuffled_data = np.array(range(n_datapoints))
+                np.random.shuffle(shuffled_data)
+                for j in range(n_batches): 
+                    gradient = self.gradient(self.X[shuffled_data][(batch_size*j):(batch_size*(j+1))], self.y[shuffled_data][(batch_size*j):(batch_size*(j+1))], self.parameters)
+                    self.step_method.training_step(gradient)
+                
+                if plot_step < len(plot_steps) and i == plot_steps[plot_step]:
+                    mse_values.append(self.mse())
+                    plot_step += 1
+                    
+            return plot_steps, mse_values
+        else: 
+            for i in range(epochs):
+                shuffled_data = np.array(range(n_datapoints))
+                np.random.shuffle(shuffled_data)
+
+                for j in range(n_batches): 
+                    gradient = self.gradient(self.X[shuffled_data][(batch_size*j):(batch_size*(j+1))], self.y[shuffled_data][(batch_size*j):(batch_size*(j+1))], self.parameters)
+                    self.step_method.training_step(gradient)
