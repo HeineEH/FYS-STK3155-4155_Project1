@@ -18,7 +18,7 @@ class BiasVariance:
           self.bias = np.zeros(max_degree)
           self.variance = np.zeros(max_degree)
 
-     def boostrap(self):
+     def bootstrap(self):
 
         for degree in range(1,self.max_degree+1):
             model = make_pipeline(PolynomialFeatures(degree=degree), LinearRegression(fit_intercept=False))
