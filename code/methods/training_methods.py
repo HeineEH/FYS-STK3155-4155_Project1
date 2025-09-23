@@ -19,6 +19,7 @@ class _TrainingMethod:
         gradient: _Gradient,
         starting_parameters: npt.NDArray[np.floating],
         step_method: "_StepMethod",
+        t1: int = 100,
     ) -> None:
         self.parameters = starting_parameters.copy()
         self.feature_amount = X.shape[1]
@@ -51,6 +52,18 @@ class _TrainingMethod:
         y_pred = self.predict(self.X_test, already_scaled=True)     ##
         return mean_squared_error(self.y_test, y_pred)     ##
     
+    def analytical_OLS_mse(self): 
+        X_transpose = np.transpose(self.X)
+        parameters = np.linalg.pinv(X_transpose @ self.X) @ X_transpose @ self.y
+        y_pred = self.X_test @ parameters + self.y_mean
+        return mean_squared_error(self.y_test,y_pred)
+    
+    def analytical_Ridge_mse(self,lambda_): 
+        X_transpose = np.transpose(self.X)
+        parameters = np.linalg.pinv(X_transpose @ self.X + lambda_*np.eye(self.X.shape[1])) @ X_transpose @ self.y
+        y_pred = self.X_test @ parameters + self.y_mean
+        return mean_squared_error(self.y_test,y_pred)
+    
     def train(self, iterations: int = 1000, store_mse: bool = False) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
         ...
 
@@ -80,9 +93,14 @@ class GradientDescent(_TrainingMethod):
                 self.step_method.training_step(gradient)
 
 class StochasticGradientDescent(_TrainingMethod): 
+
+    def learning_schedule(self,t,t0,t1): 
+        return t0/(t + t1)
+
     def train(self, epochs: int = 1000, n_batches: int = 5,store_mse: bool = True) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
         n_datapoints = self.X.shape[0]
         batch_size = int(n_datapoints/n_batches)
+        initial_learning_rate = self.learning_rate
         if store_mse:
             plot_steps = np.unique(np.logspace(0, np.log10(epochs-1), num=100, dtype=int))
             plot_step = 0
@@ -92,6 +110,8 @@ class StochasticGradientDescent(_TrainingMethod):
                 np.random.shuffle(shuffled_data)
                 for j in range(n_batches): 
                     gradient = self.gradient(self.X[shuffled_data][(batch_size*j):(batch_size*(j+1))], self.y[shuffled_data][(batch_size*j):(batch_size*(j+1))] - self.y_mean, self.parameters)
+                    t = i*n_batches + j
+                    self.learning_rate = self.learning_schedule(t,initial_learning_rate*10*n_batches,10*n_batches)
                     self.step_method.training_step(gradient)
                 
                 if plot_step < len(plot_steps) and i == plot_steps[plot_step]:

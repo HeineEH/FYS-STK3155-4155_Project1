@@ -45,7 +45,6 @@ class ADAgradStep(_StepMethod):
     
     def setup(self, num_features: int) -> None:
         self.accumulated_gradient = np.zeros(num_features)
-
         
     def training_step(self, gradient: npt.NDArray[np.floating]) -> None:
         self.accumulated_gradient += gradient**2  # Accumulate squared gradients
