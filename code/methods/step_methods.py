@@ -39,7 +39,7 @@ class MomentumGradientStep(_StepMethod):
         self.caller.parameters -= self.velocity
         
 class ADAgradStep(_StepMethod):
-    def __init__(self, learning_rate: float, error: float = 1e-7) -> None:
+    def __init__(self, learning_rate: float, error: float = 1e-8) -> None:
         self.learning_rate = learning_rate
         self.error = error
     
@@ -52,7 +52,7 @@ class ADAgradStep(_StepMethod):
         self.caller.parameters -= self.learning_rate * adjusted_gradient
         
 class RMSpropStep(_StepMethod):
-    def __init__(self, learning_rate: float, decay_rate: float, error: float = 1e-6) -> None:
+    def __init__(self, learning_rate: float, decay_rate: float, error: float = 1e-8) -> None:
         self.learning_rate = learning_rate
         self.decay_rate = decay_rate
         self.error = error

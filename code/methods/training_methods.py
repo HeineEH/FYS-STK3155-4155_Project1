@@ -5,6 +5,7 @@ from sklearn.metrics import mean_squared_error
 from .regression_methods import _Gradient
 from typing import TYPE_CHECKING
 from sklearn.model_selection import train_test_split
+from sklearn import linear_model
 
 if TYPE_CHECKING:
     from .step_methods import _StepMethod
@@ -58,10 +59,16 @@ class _TrainingMethod:
         y_pred = self.X_test @ parameters + self.y_mean
         return mean_squared_error(self.y_test,y_pred)
     
-    def analytical_Ridge_mse(self,lambda_): 
+    def analytical_Ridge_mse(self,lambda_: float): 
         X_transpose = np.transpose(self.X)
-        parameters = np.linalg.pinv(X_transpose @ self.X + lambda_*np.eye(self.X.shape[1])) @ X_transpose @ self.y
+        parameters = np.linalg.pinv(X_transpose @ self.X + len(self.y)*lambda_*np.eye(self.X.shape[1])) @ X_transpose @ self.y
         y_pred = self.X_test @ parameters + self.y_mean
+        return mean_squared_error(self.y_test,y_pred)
+    
+    def sklearn_lasso_mse(self,lambda_: float): 
+        reg_lasso = linear_model.Lasso(0.5*lambda_,fit_intercept=True)
+        reg_lasso.fit(self.X,self.y)
+        y_pred = reg_lasso.predict(self.X_test)
         return mean_squared_error(self.y_test,y_pred)
     
     def train(self, iterations: int = 1000, store_mse: bool = False) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
