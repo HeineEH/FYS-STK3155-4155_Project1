@@ -10,6 +10,15 @@ from sklearn import linear_model
 if TYPE_CHECKING:
     from .step_methods import _StepMethod
 
+# Util function for getting points of test-sampling
+def get_sample_points(iterations: int, samples: int, logarithmic=True):
+    if logarithmic:
+        sample_points = np.logspace(0, np.log10(iterations), num=samples, dtype=int)
+    else:
+        sample_points = np.linspace(0, iterations, num=samples, dtype=int)
+    
+    return np.unique(sample_points)
+
 # Template for training methods, like gradient descent, and stochastic gradient descent
 class _TrainingMethod:
     parameters: npt.NDArray[np.floating]
@@ -24,9 +33,7 @@ class _TrainingMethod:
     ) -> None:
         self.parameters = starting_parameters.copy()
         self.feature_amount = X.shape[1]
-        #self.X = X
-        #self.y = y
-        self.X, self.X_test, self.y, self.y_test = train_test_split(X, y, test_size=0.3,random_state=42)     ##
+        self.X, self.X_test, self.y, self.y_test = train_test_split(X, y, test_size=0.3,random_state=42)
         self.gradient = gradient
         self.step_method = step_method
         self.step_method.setup(self.feature_amount)
@@ -35,7 +42,7 @@ class _TrainingMethod:
 
         self.scaler = StandardScaler()
         self.X = self.scaler.fit_transform(self.X)
-        self.X_test = self.scaler.transform(self.X_test)                            ##
+        self.X_test = self.scaler.transform(self.X_test)
         self.y_mean = self.y.mean()
 
         self.setup()
@@ -50,87 +57,83 @@ class _TrainingMethod:
         return X @ self.parameters + self.y_mean
         
     def mse(self):
-        y_pred = self.predict(self.X_test, already_scaled=True)     ##
-        return mean_squared_error(self.y_test, y_pred)     ##
+        y_pred = self.predict(self.X_test, already_scaled=True)
+        return mean_squared_error(self.y_test, y_pred)
     
     def analytical_OLS_mse(self): 
         X_transpose = np.transpose(self.X)
-        parameters = np.linalg.pinv(X_transpose @ self.X) @ X_transpose @ self.y
+        parameters = np.linalg.pinv(X_transpose @ self.X) @ X_transpose @ (self.y - self.y_mean)
         y_pred = self.X_test @ parameters + self.y_mean
         return mean_squared_error(self.y_test,y_pred)
     
     def analytical_Ridge_mse(self,lambda_: float): 
         X_transpose = np.transpose(self.X)
-        parameters = np.linalg.pinv(X_transpose @ self.X + len(self.y)*lambda_*np.eye(self.X.shape[1])) @ X_transpose @ self.y
+        parameters = np.linalg.pinv(X_transpose @ self.X + len(self.y)*lambda_*np.eye(self.X.shape[1])) @ X_transpose @ (self.y - self.y_mean)
         y_pred = self.X_test @ parameters + self.y_mean
         return mean_squared_error(self.y_test,y_pred)
     
     def sklearn_lasso_mse(self,lambda_: float): 
         reg_lasso = linear_model.Lasso(0.5*lambda_,fit_intercept=True)
-        reg_lasso.fit(self.X,self.y)
-        y_pred = reg_lasso.predict(self.X_test)
+        reg_lasso.fit(self.X,self.y-self.y_mean)
+        y_pred = reg_lasso.predict(self.X_test) + self.y_mean
         return mean_squared_error(self.y_test,y_pred)
     
-    def train(self, iterations: int = 1000, store_mse: bool = False) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
+    def train(self, *args, **kwargs) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
         ...
-
 
 
 # ========== Training methods ==========
 
 class GradientDescent(_TrainingMethod):
-    def train(self, iterations: int = 1000, store_mse: bool = False) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
-        if store_mse:
-            plot_steps = np.unique(np.logspace(0, np.log10(iterations-1), num=100, dtype=int))
-            plot_step = 0
-            mse_values = []
-            for i in range(iterations):
-                gradient = self.gradient(self.X, self.y-self.y_mean, self.parameters)
-                self.step_method.training_step(gradient)
+    def train(self, iterations: int = 1000, test_samples: int = 100) -> tuple[npt.ArrayLike, npt.ArrayLike]:
+        # MSE sampling
+        sample_points = get_sample_points(iterations, test_samples)
+        mse_values = np.zeros((len(sample_points)+1, 2))
+        mse_values[0] = (1, self.mse())
+        samples_done = 0
+        
+        for i in range(iterations):
+            gradient = self.gradient(self.X, self.y, self.parameters)
+            self.step_method.training_step(gradient)
+            if i + 1 == sample_points[samples_done]:
+                mse_values[samples_done + 1] = (i + 2, self.mse())
+                samples_done += 1
+                if samples_done == len(sample_points):
+                    break
                 
-                if plot_step < len(plot_steps) and i == plot_steps[plot_step]:
-                    mse_values.append(self.mse())
-                    plot_step += 1
-                    
-            return plot_steps, mse_values
-
-        else:
-            for i in range(iterations):
-                gradient = self.gradient(self.X, self.y - self.y_mean, self.parameters)
-                self.step_method.training_step(gradient)
+            
+    
+        return mse_values[:, 0], mse_values[:, 1]
+                
 
 class StochasticGradientDescent(_TrainingMethod): 
-
     def learning_schedule(self,t,t0,t1): 
         return t0/(t + t1)
 
-    def train(self, epochs: int = 1000, n_batches: int = 5,store_mse: bool = True) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
+    def train(self, epochs: int = 1000, n_batches: int = 5, test_samples: int = 1000, logarithmic_sampling = True) -> tuple[npt.ArrayLike, npt.ArrayLike]:
+        # MSE sampling
+        sample_points = get_sample_points(epochs, test_samples, logarithmic_sampling)
+        mse_values = np.zeros((len(sample_points)+1, 2))
+        mse_values[0] = (1, self.mse())
+        samples_done = 0
+
         n_datapoints = self.X.shape[0]
         batch_size = int(n_datapoints/n_batches)
-        initial_learning_rate = self.learning_rate
-        if store_mse:
-            plot_steps = np.unique(np.logspace(0, np.log10(epochs-1), num=100, dtype=int))
-            plot_step = 0
-            mse_values = []
-            for i in range(epochs):
-                shuffled_data = np.array(range(n_datapoints))
-                np.random.shuffle(shuffled_data)
-                for j in range(n_batches): 
-                    gradient = self.gradient(self.X[shuffled_data][(batch_size*j):(batch_size*(j+1))], self.y[shuffled_data][(batch_size*j):(batch_size*(j+1))] - self.y_mean, self.parameters)
-                    t = i*n_batches + j
-                    self.learning_rate = self.learning_schedule(t,initial_learning_rate*10*n_batches,10*n_batches)
-                    self.step_method.training_step(gradient)
+        initial_learning_rate = self.step_method.learning_rate
+        
+        for i in range(epochs):
+            shuffled_data = np.array(range(n_datapoints))
+            np.random.shuffle(shuffled_data)
+            for j in range(n_batches): 
+                gradient = self.gradient(self.X[shuffled_data][(batch_size*j):(batch_size*(j+1))], self.y[shuffled_data][(batch_size*j):(batch_size*(j+1))] - self.y_mean, self.parameters)
+                t = i*n_batches + j
+                self.learning_rate = self.learning_schedule(t,initial_learning_rate*10*n_batches,10*n_batches)
+                self.step_method.training_step(gradient)
+            
+            if i + 1 == sample_points[samples_done]:
+                mse_values[samples_done + 1] = (i + 2, self.mse())
+                samples_done += 1
+                if samples_done == len(sample_points):
+                    break
                 
-                if plot_step < len(plot_steps) and i == plot_steps[plot_step]:
-                    mse_values.append(self.mse())
-                    plot_step += 1
-                    
-            return plot_steps, mse_values
-        else: 
-            for i in range(epochs):
-                shuffled_data = np.array(range(n_datapoints))
-                np.random.shuffle(shuffled_data)
-
-                for j in range(n_batches): 
-                    gradient = self.gradient(self.X[shuffled_data][(batch_size*j):(batch_size*(j+1))], self.y[shuffled_data][(batch_size*j):(batch_size*(j+1))] - self.y_mean, self.parameters)
-                    self.step_method.training_step(gradient)
+        return mse_values[:, 0], mse_values[:, 1]
