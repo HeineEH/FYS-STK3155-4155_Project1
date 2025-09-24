@@ -8,9 +8,10 @@ if TYPE_CHECKING:
 # Template for step methods, like gd-momentum, RMSprop, ADAgrad
 class _StepMethod:
     caller: "_TrainingMethod"
+    learning_rate: float
     def setup(self, num_features: int) -> None:
         ...
-    def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None) -> None:
+    def training_step(self, gradient: npt.NDArray[np.floating]) -> None:
         ...
 
 
@@ -21,9 +22,8 @@ class ConstantGradientStep(_StepMethod):
     def __init__(self, learning_rate: float) -> None:
         self.learning_rate = learning_rate
     
-    def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None) -> None:
+    def training_step(self, gradient: npt.NDArray[np.floating]) -> None:
         self.caller.parameters -= self.learning_rate * gradient
-        
 
 
 class MomentumGradientStep(_StepMethod):
@@ -34,10 +34,11 @@ class MomentumGradientStep(_StepMethod):
     def setup(self, num_features: int) -> None:
         self.velocity: npt.NDArray[np.floating] = np.zeros(num_features)
     
-    def training_step(self, gradient: npt.NDArray[np.floating], iteration: int | None = None, ) -> None:
+    def training_step(self, gradient: npt.NDArray[np.floating]) -> None:
         self.velocity = self.momentum * self.velocity + self.learning_rate * gradient
         self.caller.parameters -= self.velocity
-        
+
+
 class ADAgradStep(_StepMethod):
     def __init__(self, learning_rate: float, error: float = 1e-8) -> None:
         self.learning_rate = learning_rate
