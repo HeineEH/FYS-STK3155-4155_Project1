@@ -55,6 +55,12 @@ class _TrainingMethod:
             X = self.scaler.transform(X)
         
         return X @ self.parameters + self.y_mean
+    
+    def OLS_Hessian(self):
+        return (2.0/self.X.shape[0])*np.transpose(self.X) @ self.X 
+    
+    def Ridge_Hessian(self,lambda_: float):
+        return (2.0/self.X.shape[0])*np.transpose(self.X) @ self.X + 2*lambda_*np.eye(self.X.shape[1])
         
     def mse(self):
         y_pred = self.predict(self.X_test, already_scaled=True)
@@ -127,7 +133,7 @@ class StochasticGradientDescent(_TrainingMethod):
             for j in range(n_batches): 
                 gradient = self.gradient(self.X[shuffled_data][(batch_size*j):(batch_size*(j+1))], self.y[shuffled_data][(batch_size*j):(batch_size*(j+1))] - self.y_mean, self.parameters)
                 t = i*n_batches + j
-                self.learning_rate = self.learning_schedule(t,initial_learning_rate*10*n_batches,10*n_batches)
+                self.step_method.learning_rate = self.learning_schedule(t,initial_learning_rate*70*n_batches,70*n_batches)
                 self.step_method.training_step(gradient)
             
             if i + 1 == sample_points[samples_done]:
