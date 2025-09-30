@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.typing as npt
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 from .regression_methods import _Gradient
 from typing import TYPE_CHECKING
 from sklearn.model_selection import train_test_split
@@ -64,25 +64,29 @@ class _TrainingMethod:
         
     def mse(self):
         y_pred = self.predict(self.X_test, already_scaled=True)
-        return mean_squared_error(self.y_test, y_pred)
+        return mean_squared_error(self.y_test, y_pred)/np.mean((self.y_test - self.y_mean)**2)
+    
+    def r2(self):
+        y_pred = self.predict(self.X_test, already_scaled=True)
+        return r2_score(self.y_test, y_pred)
     
     def analytical_OLS_mse(self): 
         X_transpose = np.transpose(self.X)
         parameters = np.linalg.pinv(X_transpose @ self.X) @ X_transpose @ (self.y - self.y_mean)
         y_pred = self.X_test @ parameters + self.y_mean
-        return mean_squared_error(self.y_test,y_pred)
+        return mean_squared_error(self.y_test,y_pred)/np.mean((self.y_test - self.y_mean)**2)
     
     def analytical_Ridge_mse(self,lambda_: float): 
         X_transpose = np.transpose(self.X)
         parameters = np.linalg.pinv(X_transpose @ self.X + len(self.y)*lambda_*np.eye(self.X.shape[1])) @ X_transpose @ (self.y - self.y_mean)
         y_pred = self.X_test @ parameters + self.y_mean
-        return mean_squared_error(self.y_test,y_pred)
+        return mean_squared_error(self.y_test,y_pred)/np.mean((self.y_test - self.y_mean)**2)
     
     def sklearn_lasso_mse(self,lambda_: float): 
         reg_lasso = linear_model.Lasso(0.5*lambda_,fit_intercept=True)
         reg_lasso.fit(self.X,self.y-self.y_mean)
         y_pred = reg_lasso.predict(self.X_test) + self.y_mean
-        return mean_squared_error(self.y_test,y_pred)
+        return mean_squared_error(self.y_test,y_pred)/np.mean((self.y_test - self.y_mean)**2)
     
     def train(self, *args, **kwargs) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
         ...
@@ -99,7 +103,7 @@ class GradientDescent(_TrainingMethod):
         samples_done = 0
         
         for i in range(iterations):
-            gradient = self.gradient(self.X, self.y, self.parameters)
+            gradient = self.gradient(self.X, self.y - self.y_mean, self.parameters)
             self.step_method.training_step(gradient)
             if i + 1 == sample_points[samples_done]:
                 mse_values[samples_done + 1] = (i + 2, self.mse())
@@ -109,7 +113,7 @@ class GradientDescent(_TrainingMethod):
                 
             
     
-        return mse_values[:, 0], mse_values[:, 1]
+        return mse_values[:, 0],mse_values[:, 1]
                 
 
 class StochasticGradientDescent(_TrainingMethod): 
