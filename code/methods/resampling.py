@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.pipeline import make_pipeline
@@ -8,16 +9,17 @@ from sklearn.utils import resample
 from sklearn.preprocessing import StandardScaler
 
 class BiasVariance:
-    def __init__(self,x,y,max_degree = 15, test_size = 0.2, random_state = 42): 
+    def __init__(self,x,y, max_degree = 15, test_size = 0.2, random_state = 42, model = LinearRegression(fit_intercept=False)):
         self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(x.reshape(-1,1), y.reshape(-1,1), test_size=test_size,random_state = random_state)
         self.max_degree = max_degree
+        self.model = model
 
     def bootstrap(self, n_bootstraps = 100):
         mse = np.zeros(self.max_degree)
         bias = np.zeros(self.max_degree)
         variance = np.zeros(self.max_degree)
         for degree in range(1,self.max_degree+1):
-            model = make_pipeline(PolynomialFeatures(degree=degree), LinearRegression(fit_intercept=False))
+            model = make_pipeline(PolynomialFeatures(degree=degree, include_bias=False), StandardScaler(), self.model)
             y_pred = np.zeros((self.y_test.shape[0], n_bootstraps))
 
             for i in range(n_bootstraps):
@@ -40,9 +42,9 @@ class BiasVariance:
             x = self.x_train.copy()
 
         for degree in range(1,self.max_degree+1):
-            model = make_pipeline(PolynomialFeatures(degree=degree), LinearRegression(fit_intercept=False))
+            model = make_pipeline(PolynomialFeatures(degree=degree, include_bias=False), StandardScaler(), self.model)
             y_pred = model.fit(self.x_train, self.y_train).predict(x)
-            mse[degree-1] = np.mean((y - y_pred)**2)
+            mse[degree-1] = mean_squared_error(y,y_pred)
         return mse
     
 
@@ -50,7 +52,7 @@ class BiasVariance:
         mse = np.zeros(self.max_degree)
         kfold = KFold(n_splits=k)
         for degree in range(1, self.max_degree+1):
-            model = make_pipeline(PolynomialFeatures(degree=degree), LinearRegression(fit_intercept=False))
+            model = make_pipeline(PolynomialFeatures(degree=degree, include_bias=False), StandardScaler(), self.model)
             estimated_mse_folds = cross_val_score(model, self.x_train, self.y_train, scoring='neg_mean_squared_error', cv=kfold)
             mse[degree-1] = np.mean(-estimated_mse_folds)
         return mse
