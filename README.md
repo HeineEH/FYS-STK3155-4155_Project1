@@ -10,10 +10,11 @@ All our code files is located in the folder called "Code". Following are the con
 Notebook "OLS&Ridge" cover implementation of the OLS and Ridge methods applied on the Runge function. The code produce Figure 3, 4, and 5 in the PDF report file. 
 
 Notebook "GradientDecent" cover implementation of Gradient Decent and produce Figure 6 in the report.
-Notebook "GradientDecent" cover implementation of Gradient Decent and produce Figure 6 in the report.
+
 Notebook "GradientDecent" cover implementation of Gradient Decent and produce Figure 6 in the report.
 
-(We are not done yet so we will fill in later)
+Notebook "GradientDecent" cover implementation of Gradient Decent and produce Figure 6 in the report.
+
 
 To run code:
 -Clone repository
