@@ -64,7 +64,7 @@ class _TrainingMethod:
         
     def mse(self):
         y_pred = self.predict(self.X_test, already_scaled=True)
-        return mean_squared_error(self.y_test, y_pred)/np.mean((self.y_test - self.y_mean)**2)
+        return mean_squared_error(self.y_test, y_pred)/np.mean((self.y_test - self.y_test.mean())**2)
     
     def r2(self):
         y_pred = self.predict(self.X_test, already_scaled=True)
@@ -74,19 +74,19 @@ class _TrainingMethod:
         X_transpose = np.transpose(self.X)
         parameters = np.linalg.pinv(X_transpose @ self.X) @ X_transpose @ (self.y - self.y_mean)
         y_pred = self.X_test @ parameters + self.y_mean
-        return mean_squared_error(self.y_test,y_pred)/np.mean((self.y_test - self.y_mean)**2)
+        return mean_squared_error(self.y_test,y_pred)/np.mean((self.y_test - self.y_test.mean())**2)
     
     def analytical_Ridge_mse(self,lambda_: float): 
         X_transpose = np.transpose(self.X)
         parameters = np.linalg.pinv(X_transpose @ self.X + len(self.y)*lambda_*np.eye(self.X.shape[1])) @ X_transpose @ (self.y - self.y_mean)
         y_pred = self.X_test @ parameters + self.y_mean
-        return mean_squared_error(self.y_test,y_pred)/np.mean((self.y_test - self.y_mean)**2)
+        return mean_squared_error(self.y_test,y_pred)/np.mean((self.y_test - self.y_test.mean())**2)
     
     def sklearn_lasso_mse(self,lambda_: float): 
         reg_lasso = linear_model.Lasso(0.5*lambda_,fit_intercept=True)
         reg_lasso.fit(self.X,self.y-self.y_mean)
         y_pred = reg_lasso.predict(self.X_test) + self.y_mean
-        return mean_squared_error(self.y_test,y_pred)/np.mean((self.y_test - self.y_mean)**2)
+        return mean_squared_error(self.y_test,y_pred)/np.mean((self.y_test - self.y_test.mean())**2)
     
     def train(self, *args, **kwargs) -> tuple[npt.ArrayLike, npt.ArrayLike] | None:
         ...

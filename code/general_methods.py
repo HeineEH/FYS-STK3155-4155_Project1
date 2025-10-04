@@ -14,7 +14,7 @@ def OLS_parameters(X, y):
 def Ridge_parameters(X, y, lambda_reg = 0.1):
     pred = X.shape[1]
     I = np.eye(pred) # size: (p,p)
-    return np.linalg.pinv((X.T @ X)+I*lambda_reg) @ X.T @ y
+    return np.linalg.pinv((X.T @ X)+len(y)*I*lambda_reg) @ X.T @ y
 
 def polynomial_features(x, p, intercept = False):
     n = len(x)
@@ -47,7 +47,7 @@ def MSE_and_R2(x,y,polynomial_degrees,regression_type="OLS",lamb = 0.0):
     mse_values = np.zeros(len(polynomial_degrees))
     r2_values = np.zeros(len(polynomial_degrees))
     for i in range(len(polynomial_degrees)):
-        X = polynomial_features(x, polynomial_degrees[i])
+        X =  polynomial_features(x, polynomial_degrees[i])
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,random_state=42)
         theta, scaler = opt_theta(X_train,y_train,regression_type = regression_type, lamb = lamb)
         X_test_s = scaler.transform(X_test)
