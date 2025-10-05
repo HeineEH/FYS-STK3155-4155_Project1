@@ -45,3 +45,11 @@ def MSE_and_R2(x,y,polynomial_degrees,regression_type="OLS",lamb = 0.0):
         mse_values[i] = ols_mse
         r2_values[i] = ols_r2
     return mse_values,r2_values
+
+def runge(x):
+    return 1/(1+25*x**2)
+
+def generate_dataset(num: int = 400):
+    x = np.linspace(-1, 1, num)
+    y = runge(x) + 0.05*np.random.normal(0, 1, num)
+    return x, y
