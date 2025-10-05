@@ -8,7 +8,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.utils import resample
 from sklearn.preprocessing import StandardScaler
 
-class BiasVariance:
+class ResamplingMethods:
     def __init__(self,x,y, max_degree = 15, test_size = 0.2, random_state = 42, model = LinearRegression(fit_intercept=False)):
         self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(x.reshape(-1,1), y.reshape(-1,1), test_size=test_size,random_state = random_state) 
         self.max_degree = max_degree
