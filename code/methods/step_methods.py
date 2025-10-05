@@ -18,7 +18,7 @@ class _StepMethod:
 
 # ========== Step methods ==========
 
-class ConstantGradientStep(_StepMethod):
+class ConstantLearningRateStep(_StepMethod):
     def __init__(self, learning_rate: float) -> None:
         self.learning_rate = learning_rate
     
@@ -26,7 +26,7 @@ class ConstantGradientStep(_StepMethod):
         self.caller.parameters -= self.learning_rate * gradient
 
 
-class MomentumGradientStep(_StepMethod):
+class MomentumStep(_StepMethod):
     def __init__(self, learning_rate: float, momentum: float, ) -> None:
         self.learning_rate = learning_rate
         self.momentum = momentum

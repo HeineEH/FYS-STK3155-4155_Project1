@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from methods.training_methods import GradientDescent, StochasticGradientDescent
-from methods.step_methods import ConstantGradientStep, MomentumGradientStep, ADAgradStep, RMSpropStep, AdamStep
+from methods.step_methods import ConstantLearningRateStep, MomentumStep, ADAgradStep, RMSpropStep, AdamStep
 from methods.regression_methods import OLS_Gradient, Ridge_Gradient, Lasso_Gradient
 from sklearn.preprocessing import PolynomialFeatures
 
