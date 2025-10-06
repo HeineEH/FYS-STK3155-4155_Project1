@@ -10,6 +10,14 @@ In this project, we have investigated the performance of Ordinary Least Squares 
 
 ## Description of GitHub folders and files
 
+### Project_1.pdf
+
+The project report. 
+
+### LLM_conversations.pdf
+
+Description of the use of LLM's, including links to conversations with them. 
+
 ### code
 
 Contains all of the code for the project, including: 
